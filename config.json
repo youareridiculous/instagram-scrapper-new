@@ -1,0 +1,32 @@
+{
+  "search": {
+    "hashtags": [
+      "entrepreneur",
+      "startup"
+    ],
+    "locations": [
+      "San Francisco, California"
+    ],
+    "seed_accounts": [],
+    "use_explore": false,
+    "max_per_hashtag": 50,
+    "max_per_location": 50,
+    "max_per_account": 100,
+    "max_explore": 50
+  },
+  "filters": {
+    "min_followers": 1000,
+    "max_followers": 50000,
+    "min_following": null,
+    "max_following": null,
+    "min_posts": 10,
+    "max_posts": null,
+    "bio_keywords": [
+      "founder",
+      "entrepreneur"
+    ],
+    "verified_only": false,
+    "account_type": null
+  }
+}
+

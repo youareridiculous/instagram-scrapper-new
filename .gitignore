@@ -1,0 +1,42 @@
+# Environment variables
+.env
+
+# Scraped data
+scraped_data/
+*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Playwright
+.playwright/
+
+# Flask
+instance/
+.webassets-cache
