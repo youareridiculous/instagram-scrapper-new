@@ -239,6 +239,94 @@
             font-family: monospace;
             font-size: 14px;
         }
+
+        .modal-wide .modal-content {
+            max-width: 720px;
+        }
+
+        .form-section {
+            margin-bottom: 22px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .form-section:last-of-type {
+            border-bottom: none;
+        }
+
+        .form-section h3 {
+            font-size: 15px;
+            color: #374151;
+            margin-bottom: 12px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px 16px;
+            margin-bottom: 12px;
+        }
+
+        @media (max-width: 640px) {
+            .form-row { grid-template-columns: 1fr; }
+        }
+
+        .form-field label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #4b5563;
+            margin-bottom: 4px;
+        }
+
+        .form-field input[type="text"],
+        .form-field input[type="number"],
+        .form-field textarea,
+        .form-field select {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-field textarea {
+            min-height: 72px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .form-field .hint {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 4px;
+        }
+
+        .form-field.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .checkbox-row input { width: auto; }
+
+        .link-advanced {
+            display: inline-block;
+            margin-top: 12px;
+            color: #4f46e5;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: underline;
+            background: none;
+            border: none;
+            padding: 0;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -260,7 +348,7 @@
             <div class="controls">
                 <button class="btn-start" onclick="startScraper()">▶ Start Scraper</button>
                 <button class="btn-stop" onclick="stopScraper()">⏹ Stop</button>
-                <button class="btn-config" onclick="showConfig()">⚙️ Configure</button>
+                <button class="btn-config" onclick="showFormConfig()">⚙️ Configure</button>
             </div>
         </div>
         
@@ -289,13 +377,119 @@
         </div>
     </div>
     
+    <div class="config-modal modal-wide" id="configFormModal">
+        <div class="modal-content">
+            <h2>Search &amp; filters</h2>
+            <p style="color: #6b7280; margin-bottom: 18px;">Set where to look and which profiles to keep. Nothing runs until you press Start Scraper.</p>
+
+            <div class="form-section">
+                <h3>Search</h3>
+                <div class="form-row">
+                    <div class="form-field full-width">
+                        <label for="cfg_hashtags">Hashtags</label>
+                        <input type="text" id="cfg_hashtags" placeholder="entrepreneur, startup" />
+                        <span class="hint">Comma-separated, without #</span>
+                    </div>
+                    <div class="form-field full-width">
+                        <label for="cfg_locations">Locations</label>
+                        <textarea id="cfg_locations" placeholder="One per line, e.g.&#10;San Francisco, California"></textarea>
+                        <span class="hint">One location per line (commas inside a city name are OK)</span>
+                    </div>
+                    <div class="form-field full-width">
+                        <label for="cfg_seed">Seed accounts (usernames)</label>
+                        <input type="text" id="cfg_seed" placeholder="some_account, other_brand" />
+                        <span class="hint">Comma-separated; scraper can load followers of these accounts</span>
+                    </div>
+                    <div class="form-field">
+                        <label for="cfg_max_tag">Max per hashtag</label>
+                        <input type="number" id="cfg_max_tag" min="1" placeholder="50" />
+                    </div>
+                    <div class="form-field">
+                        <label for="cfg_max_loc">Max per location</label>
+                        <input type="number" id="cfg_max_loc" min="1" placeholder="50" />
+                    </div>
+                    <div class="form-field">
+                        <label for="cfg_max_seed">Max followers per seed</label>
+                        <input type="number" id="cfg_max_seed" min="1" placeholder="100" />
+                    </div>
+                    <div class="form-field">
+                        <label for="cfg_max_explore">Max from explore</label>
+                        <input type="number" id="cfg_max_explore" min="1" placeholder="50" />
+                    </div>
+                    <div class="form-field full-width">
+                        <div class="checkbox-row">
+                            <input type="checkbox" id="cfg_use_explore" />
+                            <label for="cfg_use_explore" style="margin:0;font-weight:500;">Include Explore page</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>Filters (who to keep)</h3>
+                <div class="form-row">
+                    <div class="form-field">
+                        <label for="cfg_min_fol">Min followers</label>
+                        <input type="number" id="cfg_min_fol" min="0" placeholder="empty = no min" />
+                    </div>
+                    <div class="form-field">
+                        <label for="cfg_max_fol">Max followers</label>
+                        <input type="number" id="cfg_max_fol" min="0" placeholder="empty = no max" />
+                    </div>
+                    <div class="form-field">
+                        <label for="cfg_min_ing">Min following</label>
+                        <input type="number" id="cfg_min_ing" min="0" />
+                    </div>
+                    <div class="form-field">
+                        <label for="cfg_max_ing">Max following</label>
+                        <input type="number" id="cfg_max_ing" min="0" />
+                    </div>
+                    <div class="form-field">
+                        <label for="cfg_min_posts">Min posts</label>
+                        <input type="number" id="cfg_min_posts" min="0" />
+                    </div>
+                    <div class="form-field">
+                        <label for="cfg_max_posts">Max posts</label>
+                        <input type="number" id="cfg_max_posts" min="0" />
+                    </div>
+                    <div class="form-field full-width">
+                        <label for="cfg_bio_kw">Bio keywords (any match)</label>
+                        <input type="text" id="cfg_bio_kw" placeholder="founder, entrepreneur, ceo" />
+                        <span class="hint">Comma-separated; bio must contain at least one keyword</span>
+                    </div>
+                    <div class="form-field">
+                        <label for="cfg_acct_type">Account type</label>
+                        <select id="cfg_acct_type">
+                            <option value="">Any</option>
+                            <option value="personal">Personal</option>
+                            <option value="business">Business</option>
+                        </select>
+                    </div>
+                    <div class="form-field full-width">
+                        <div class="checkbox-row">
+                            <input type="checkbox" id="cfg_verified_only" />
+                            <label for="cfg_verified_only" style="margin:0;font-weight:500;">Verified accounts only</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                <button type="button" class="btn-config" onclick="saveFormConfig()">💾 Save settings</button>
+                <button type="button" class="btn-stop" onclick="hideFormConfig()">Cancel</button>
+            </div>
+            <button type="button" class="link-advanced" onclick="openJsonEditorFromForm()">Advanced: edit raw JSON…</button>
+        </div>
+    </div>
+
     <div class="config-modal" id="configModal">
         <div class="modal-content">
-            <h2>Configuration</h2>
-            <p style="color: #6b7280; margin-bottom: 15px;">Edit your search and filter settings:</p>
+            <h2>Advanced: raw JSON</h2>
+            <p style="color: #6b7280; margin-bottom: 15px;">Full <code>config.json</code>. Invalid JSON will be rejected.</p>
             <textarea id="configTextarea"></textarea>
-            <div style="margin-top: 20px; display: flex; gap: 10px;">
-                <button class="btn-config" onclick="saveConfig()">💾 Save</button>
+            <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="btn-config" onclick="saveConfig()">💾 Save JSON</button>
+                <button type="button" class="btn-config" style="background:#6366f1;" onclick="backToFormFromJson()">← Back to form</button>
                 <button class="btn-stop" onclick="hideConfig()">Cancel</button>
             </div>
         </div>
@@ -400,6 +594,139 @@
                 });
         }
         
+        function commaSplit(str) {
+            return str.split(',').map(s => s.trim()).filter(Boolean);
+        }
+
+        function linesSplit(str) {
+            return str.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+        }
+
+        function setVal(id, v) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (v === null || v === undefined) el.value = '';
+            else el.value = String(v);
+        }
+
+        function applyConfigToForm(data) {
+            const s = data.search || {};
+            const f = data.filters || {};
+            setVal('cfg_hashtags', (s.hashtags || []).join(', '));
+            setVal('cfg_locations', (s.locations || []).join('\n'));
+            setVal('cfg_seed', (s.seed_accounts || []).join(', '));
+            document.getElementById('cfg_use_explore').checked = !!s.use_explore;
+            setVal('cfg_max_tag', s.max_per_hashtag != null ? s.max_per_hashtag : '');
+            setVal('cfg_max_loc', s.max_per_location != null ? s.max_per_location : '');
+            setVal('cfg_max_seed', s.max_per_account != null ? s.max_per_account : '');
+            setVal('cfg_max_explore', s.max_explore != null ? s.max_explore : '');
+            setVal('cfg_min_fol', f.min_followers != null ? f.min_followers : '');
+            setVal('cfg_max_fol', f.max_followers != null ? f.max_followers : '');
+            setVal('cfg_min_ing', f.min_following != null ? f.min_following : '');
+            setVal('cfg_max_ing', f.max_following != null ? f.max_following : '');
+            setVal('cfg_min_posts', f.min_posts != null ? f.min_posts : '');
+            setVal('cfg_max_posts', f.max_posts != null ? f.max_posts : '');
+            setVal('cfg_bio_kw', (f.bio_keywords || []).join(', '));
+            document.getElementById('cfg_verified_only').checked = !!f.verified_only;
+            const at = f.account_type;
+            document.getElementById('cfg_acct_type').value = at === 'business' || at === 'personal' ? at : '';
+        }
+
+        function intOrDefault(id, defaultVal) {
+            const v = document.getElementById(id).value.trim();
+            if (v === '') return defaultVal;
+            const n = parseInt(v, 10);
+            return Number.isNaN(n) ? defaultVal : n;
+        }
+
+        function optInt(id) {
+            const v = document.getElementById(id).value.trim();
+            if (v === '') return null;
+            const n = parseInt(v, 10);
+            return Number.isNaN(n) ? null : n;
+        }
+
+        function formToConfig() {
+            const bioKw = commaSplit(document.getElementById('cfg_bio_kw').value);
+            const filters = {
+                min_followers: optInt('cfg_min_fol'),
+                max_followers: optInt('cfg_max_fol'),
+                min_following: optInt('cfg_min_ing'),
+                max_following: optInt('cfg_max_ing'),
+                min_posts: optInt('cfg_min_posts'),
+                max_posts: optInt('cfg_max_posts'),
+                bio_keywords: bioKw.length ? bioKw : [],
+                verified_only: document.getElementById('cfg_verified_only').checked,
+                account_type: document.getElementById('cfg_acct_type').value || null,
+            };
+            const search = {
+                hashtags: commaSplit(document.getElementById('cfg_hashtags').value),
+                locations: linesSplit(document.getElementById('cfg_locations').value),
+                seed_accounts: commaSplit(document.getElementById('cfg_seed').value),
+                use_explore: document.getElementById('cfg_use_explore').checked,
+                max_per_hashtag: intOrDefault('cfg_max_tag', 50),
+                max_per_location: intOrDefault('cfg_max_loc', 50),
+                max_per_account: intOrDefault('cfg_max_seed', 100),
+                max_explore: intOrDefault('cfg_max_explore', 50),
+            };
+            return { search, filters };
+        }
+
+        function postConfig(config) {
+            return fetch('/api/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config),
+            }).then(r => r.json());
+        }
+
+        function showFormConfig() {
+            fetch('/api/config')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) {
+                        alert('Could not load config: ' + (data.error || 'unknown'));
+                        return;
+                    }
+                    applyConfigToForm(data);
+                    document.getElementById('configFormModal').classList.add('active');
+                });
+        }
+
+        function hideFormConfig() {
+            document.getElementById('configFormModal').classList.remove('active');
+        }
+
+        function saveFormConfig() {
+            const config = formToConfig();
+            postConfig(config).then(data => {
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                } else {
+                    alert('Settings saved to config.json');
+                    hideFormConfig();
+                }
+            });
+        }
+
+        function openJsonEditorFromForm() {
+            const config = formToConfig();
+            document.getElementById('configTextarea').value = JSON.stringify(config, null, 2);
+            hideFormConfig();
+            document.getElementById('configModal').classList.add('active');
+        }
+
+        function backToFormFromJson() {
+            try {
+                const config = JSON.parse(document.getElementById('configTextarea').value);
+                applyConfigToForm(config);
+                hideConfig();
+                document.getElementById('configFormModal').classList.add('active');
+            } catch (e) {
+                alert('Fix JSON first: ' + e.message);
+            }
+        }
+
         function showConfig() {
             fetch('/api/config')
                 .then(r => r.json())
@@ -408,25 +735,19 @@
                     document.getElementById('configModal').classList.add('active');
                 });
         }
-        
+
         function hideConfig() {
             document.getElementById('configModal').classList.remove('active');
         }
-        
+
         function saveConfig() {
             try {
                 const config = JSON.parse(document.getElementById('configTextarea').value);
-                fetch('/api/config', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(config)
-                })
-                .then(r => r.json())
-                .then(data => {
+                postConfig(config).then(data => {
                     if (data.error) {
                         alert('Error: ' + data.error);
                     } else {
-                        alert('Configuration saved!');
+                        alert('JSON configuration saved!');
                         hideConfig();
                     }
                 });

@@ -69,7 +69,7 @@ Then open your browser to: **http://localhost:5001**
 The web interface provides:
 - 📊 Real-time dashboard with progress tracking
 - 📋 View all scraped profiles in a table
-- ⚙️ Configure search and filters from the browser
+- ⚙️ Configure search and filters from the browser (visual form + optional raw JSON)
 - ▶️ Start/stop the scraper with one click
 - 📈 Live statistics and progress updates
 - 📥 Download CSV files from the dashboard (see **Google Sheets** below)
