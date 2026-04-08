@@ -21,8 +21,9 @@ echo "📥 Installing dependencies..."
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# Install Playwright browser
-echo "🌐 Installing Playwright browser..."
+# Install Playwright browsers (scraper tries Firefox first, then Chromium)
+echo "🌐 Installing Playwright browsers..."
+playwright install firefox
 playwright install chromium
 
 # Create .env file if it doesn't exist
@@ -40,7 +41,8 @@ echo ""
 echo "Next steps:"
 echo "1. Edit .env and add your Instagram credentials"
 echo "2. Edit config.json to set your search criteria and filters"
-echo "3. Run: source venv/bin/activate && python instagram_scraper.py"
+echo "3. Run CLI: source venv/bin/activate && python instagram_scraper.py"
+echo "   Or web UI: python web_interface.py  →  http://localhost:5001"
 echo ""
 echo "⚠️  Remember: Use a separate account, not your main account!"
 

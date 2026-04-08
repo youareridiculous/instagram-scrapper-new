@@ -3,7 +3,8 @@
 import asyncio
 from playwright.async_api import async_playwright
 
-async def test():
+async def manual_smoke():
+    """Run directly: python test_browser.py (not collected by pytest)."""
     print("🌐 Testing browser...")
     playwright = await async_playwright().start()
     browser = await playwright.firefox.launch(headless=False)
@@ -15,5 +16,5 @@ async def test():
     print("✅ Test complete!")
 
 if __name__ == "__main__":
-    asyncio.run(test())
+    asyncio.run(manual_smoke())
 

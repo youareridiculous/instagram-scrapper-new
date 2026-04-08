@@ -5,9 +5,9 @@ Safely scrapes Instagram profiles based on customizable filters
 """
 
 import asyncio
-import csv
 import json
 import random
+import re
 import time
 from datetime import datetime
 from pathlib import Path
@@ -20,6 +20,43 @@ import pandas as pd
 
 # Load environment variables
 load_dotenv()
+
+
+def profile_matches_filters(profile: Dict, filters: Dict) -> bool:
+    """Pure filter check (used by tests and SafeInstagramScraper.matches_filters)."""
+    if not profile:
+        return False
+    if 'min_followers' in filters and filters['min_followers']:
+        if not profile.get('followers') or profile['followers'] < filters['min_followers']:
+            return False
+    if 'max_followers' in filters and filters['max_followers']:
+        if not profile.get('followers') or profile['followers'] > filters['max_followers']:
+            return False
+    if 'min_following' in filters and filters['min_following']:
+        if not profile.get('following') or profile['following'] < filters['min_following']:
+            return False
+    if 'max_following' in filters and filters['max_following']:
+        if not profile.get('following') or profile['following'] > filters['max_following']:
+            return False
+    if 'min_posts' in filters and filters['min_posts']:
+        if not profile.get('posts') or profile['posts'] < filters['min_posts']:
+            return False
+    if 'max_posts' in filters and filters['max_posts']:
+        if not profile.get('posts') or profile['posts'] > filters['max_posts']:
+            return False
+    if 'bio_keywords' in filters and filters['bio_keywords']:
+        bio = (profile.get('bio') or '').lower()
+        keywords = [k.lower() for k in filters['bio_keywords']]
+        if not any(keyword in bio for keyword in keywords):
+            return False
+    if 'verified_only' in filters and filters['verified_only']:
+        if not profile.get('verified'):
+            return False
+    if 'account_type' in filters and filters['account_type']:
+        if profile.get('account_type') != filters['account_type']:
+            return False
+    return True
+
 
 class SafeInstagramScraper:
     """
@@ -51,7 +88,21 @@ class SafeInstagramScraper:
         # Output directory
         self.output_dir = Path("scraped_data")
         self.output_dir.mkdir(exist_ok=True)
-        
+
+        # Optional dict from web UI: must include 'running' bool; updated in place
+        self._progress: Optional[Dict] = None
+
+    def _should_run(self) -> bool:
+        if self._progress is None:
+            return True
+        return bool(self._progress.get('running', True))
+
+    def _touch_progress(self, **kwargs) -> None:
+        if self._progress is None:
+            return
+        self._progress.update(kwargs)
+        self._progress['last_update'] = datetime.now().isoformat()
+
     async def safe_delay(self, min_seconds: Optional[float] = None, max_seconds: Optional[float] = None):
         """Random delay to mimic human behavior"""
         min_delay = min_seconds or self.min_delay
@@ -175,6 +226,8 @@ class SafeInstagramScraper:
     
     async def get_profile_data(self, username: str) -> Optional[Dict]:
         """Extract profile data from a profile page"""
+        if not self._should_run():
+            return None
         try:
             await self.check_rate_limit()
             self.request_count += 1
@@ -268,55 +321,88 @@ class SafeInstagramScraper:
     
     def matches_filters(self, profile: Dict, filters: Dict) -> bool:
         """Check if profile matches all specified filters"""
-        if not profile:
-            return False
-        
-        # Follower count filter
-        if 'min_followers' in filters and filters['min_followers']:
-            if not profile.get('followers') or profile['followers'] < filters['min_followers']:
-                return False
-        
-        if 'max_followers' in filters and filters['max_followers']:
-            if not profile.get('followers') or profile['followers'] > filters['max_followers']:
-                return False
-        
-        # Following count filter
-        if 'min_following' in filters and filters['min_following']:
-            if not profile.get('following') or profile['following'] < filters['min_following']:
-                return False
-        
-        if 'max_following' in filters and filters['max_following']:
-            if not profile.get('following') or profile['following'] > filters['max_following']:
-                return False
-        
-        # Post count filter
-        if 'min_posts' in filters and filters['min_posts']:
-            if not profile.get('posts') or profile['posts'] < filters['min_posts']:
-                return False
-        
-        if 'max_posts' in filters and filters['max_posts']:
-            if not profile.get('posts') or profile['posts'] > filters['max_posts']:
-                return False
-        
-        # Bio keywords filter
-        if 'bio_keywords' in filters and filters['bio_keywords']:
-            bio = (profile.get('bio') or '').lower()
-            keywords = [k.lower() for k in filters['bio_keywords']]
-            if not any(keyword in bio for keyword in keywords):
-                return False
-        
-        # Verified filter
-        if 'verified_only' in filters and filters['verified_only']:
-            if not profile.get('verified'):
-                return False
-        
-        # Account type filter
-        if 'account_type' in filters and filters['account_type']:
-            if profile.get('account_type') != filters['account_type']:
-                return False
-        
-        return True
-    
+        return profile_matches_filters(profile, filters)
+
+    async def _normalize_instagram_media_href(self, href: str) -> Optional[str]:
+        if not href or href.startswith('//'):
+            return None
+        href = href.split('?')[0].rstrip('/')
+        if '/p/' not in href and '/reel/' not in href and '/reels/' not in href:
+            return None
+        if href.startswith('/'):
+            return f"https://www.instagram.com{href}"
+        if 'instagram.com' in href:
+            return href
+        return None
+
+    async def _gather_media_urls_on_page(self, oversample: int) -> List[str]:
+        """Collect unique post/reel URLs currently in the DOM (not usernames)."""
+        seen_set: Set[str] = set()
+        out: List[str] = []
+        for pattern in ('a[href*="/p/"]', 'a[href*="/reel/"]', 'a[href*="/reels/"]'):
+            links = await self.page.locator(pattern).all()
+            for link in links:
+                raw = await link.get_attribute('href')
+                norm = await self._normalize_instagram_media_href(raw or '')
+                if norm and norm not in seen_set:
+                    seen_set.add(norm)
+                    out.append(norm)
+                if len(out) >= oversample:
+                    return out
+        return out
+
+    async def _username_from_media_url(self, url: str) -> Optional[str]:
+        """Open a post/reel page and read the author's handle."""
+        reserved = frozenset({
+            'p', 'reel', 'reels', 'explore', 'stories', 'accounts', 'direct',
+            'legal', 'about', 'reelst', 'tv',
+        })
+        try:
+            await self.page.goto(url, wait_until='domcontentloaded', timeout=30000)
+            await self.safe_delay(1, 2)
+            for selector in (
+                'article header a[href^="/"][href$="/"]',
+                'article a[href^="/"][href$="/"]',
+                'header a[href^="/"][href$="/"]',
+            ):
+                loc = self.page.locator(selector).first
+                if await loc.count() == 0:
+                    continue
+                href = await loc.get_attribute('href')
+                if not href:
+                    continue
+                seg = href.strip('/').split('/')
+                if len(seg) == 1 and seg[0] and seg[0].lower() not in reserved:
+                    return seg[0]
+            meta = self.page.locator('meta[property="og:title"]').first
+            if await meta.count() > 0:
+                content = await meta.get_attribute('content') or ''
+                m = re.search(r'\(@([^)]+)\)', content)
+                if m:
+                    handle = m.group(1).strip()
+                    if handle and handle.lower() not in reserved:
+                        return handle
+        except Exception as e:
+            print(f"  ⚠️ Could not resolve author for {url}: {e}")
+        return None
+
+    async def _usernames_from_media_grid(self, max_handles: int) -> List[str]:
+        """Resolve real usernames from visible post/reel links (fixes /p/ shortcode bug)."""
+        usernames: List[str] = []
+        seen: Set[str] = set()
+        urls = await self._gather_media_urls_on_page(max(max_handles * 4, 20))
+        for media_url in urls:
+            if not self._should_run():
+                break
+            if len(usernames) >= max_handles:
+                break
+            handle = await self._username_from_media_url(media_url)
+            await self.safe_delay(2, 4)
+            if handle and handle not in seen:
+                seen.add(handle)
+                usernames.append(handle)
+        return usernames[:max_handles]
+
     async def search_by_hashtag(self, hashtag: str, max_profiles: int = 50) -> List[str]:
         """Search for profiles using a hashtag"""
         print(f"🔍 Searching hashtag: #{hashtag}")
@@ -329,23 +415,15 @@ class SafeInstagramScraper:
             
             # Scroll to load more posts
             for _ in range(5):
+                if not self._should_run():
+                    break
                 await self.human_like_scroll(self.page, 2)
                 await self.safe_delay(2, 4)
-            
-            # Extract usernames from posts
-            post_links = await self.page.locator('a[href*="/p/"]').all()
-            for link in post_links[:max_profiles]:
-                href = await link.get_attribute('href')
-                if href:
-                    # Extract username from post URL
-                    parts = href.split('/')
-                    if len(parts) >= 2:
-                        username = parts[1]
-                        if username and username not in usernames:
-                            usernames.append(username)
-            
+
+            usernames = await self._usernames_from_media_grid(max_profiles)
+
             print(f"✅ Found {len(usernames)} profiles from hashtag")
-            return usernames[:max_profiles]
+            return usernames
             
         except Exception as e:
             print(f"⚠️  Error searching hashtag: {str(e)}")
@@ -375,22 +453,15 @@ class SafeInstagramScraper:
                 
                 # Scroll to load posts
                 for _ in range(5):
+                    if not self._should_run():
+                        break
                     await self.human_like_scroll(self.page, 2)
                     await self.safe_delay(2, 4)
-                
-                # Extract usernames
-                post_links = await self.page.locator('a[href*="/p/"]').all()
-                for link in post_links[:max_profiles]:
-                    href = await link.get_attribute('href')
-                    if href:
-                        parts = href.split('/')
-                        if len(parts) >= 2:
-                            username = parts[1]
-                            if username and username not in usernames:
-                                usernames.append(username)
-            
+
+                usernames = await self._usernames_from_media_grid(max_profiles)
+
             print(f"✅ Found {len(usernames)} profiles from location")
-            return usernames[:max_profiles]
+            return usernames
             
         except Exception as e:
             print(f"⚠️  Error searching location: {str(e)}")
@@ -409,6 +480,8 @@ class SafeInstagramScraper:
             # Scroll to load more followers
             scroll_count = 0
             while scroll_count < 10 and len(usernames) < max_followers:
+                if not self._should_run():
+                    break
                 await self.human_like_scroll(self.page, 1)
                 await self.safe_delay(2, 3)
                 
@@ -418,7 +491,13 @@ class SafeInstagramScraper:
                     href = await link.get_attribute('href')
                     if href and href.startswith('/') and not href.startswith('//'):
                         follower_username = href.strip('/').split('/')[0]
-                        if follower_username and follower_username not in usernames and follower_username != username:
+                        skip = frozenset({'p', 'reel', 'reels', 'explore', 'accounts', 'direct', 'stories'})
+                        if (
+                            follower_username
+                            and follower_username.lower() not in skip
+                            and follower_username not in usernames
+                            and follower_username != username
+                        ):
                             usernames.append(follower_username)
                             if len(usernames) >= max_followers:
                                 break
@@ -443,22 +522,15 @@ class SafeInstagramScraper:
             
             # Scroll to load content
             for _ in range(5):
+                if not self._should_run():
+                    break
                 await self.human_like_scroll(self.page, 2)
                 await self.safe_delay(2, 4)
-            
-            # Extract usernames
-            post_links = await self.page.locator('a[href*="/p/"]').all()
-            for link in post_links[:max_profiles]:
-                href = await link.get_attribute('href')
-                if href:
-                    parts = href.split('/')
-                    if len(parts) >= 2:
-                        username = parts[1]
-                        if username and username not in usernames:
-                            usernames.append(username)
-            
+
+            usernames = await self._usernames_from_media_grid(max_profiles)
+
             print(f"✅ Found {len(usernames)} profiles from explore")
-            return usernames[:max_profiles]
+            return usernames
             
         except Exception as e:
             print(f"⚠️  Error browsing explore: {str(e)}")
@@ -467,32 +539,48 @@ class SafeInstagramScraper:
     async def scrape_profiles(self, usernames: List[str], filters: Dict) -> List[Dict]:
         """Scrape profile data for a list of usernames"""
         matching_profiles = []
-        
+        session_visited = 0
+
         print(f"\n📊 Scraping {len(usernames)} profiles...")
-        
+
         for i, username in enumerate(usernames, 1):
+            if not self._should_run():
+                print("⏹ Stop requested; ending scrape.")
+                break
+            if session_visited >= self.max_profiles_per_session:
+                print(f"⏹ Reached max_profiles_per_session ({self.max_profiles_per_session})")
+                break
             if username in self.scraped_profiles:
                 continue
-                
+
             print(f"[{i}/{len(usernames)}] Scraping @{username}...")
-            
+            self._touch_progress(
+                progress=i,
+                total=len(usernames),
+                current_action=f'Scraping @{username} ({i}/{len(usernames)})',
+                profiles_found=len(matching_profiles),
+            )
+
             profile = await self.get_profile_data(username)
+            session_visited += 1
             await self.safe_delay()  # Delay between profiles
-            
+
             if profile:
                 self.scraped_profiles.add(username)
-                
+
                 if self.matches_filters(profile, filters):
                     matching_profiles.append(profile)
                     print(f"  ✅ Matches filters!")
                 else:
                     print(f"  ⏭️  Doesn't match filters")
-            
+
+            self._touch_progress(profiles_found=len(matching_profiles))
+
             # Take a break periodically
-            if i % self.session_break_interval == 0:
+            if session_visited > 0 and session_visited % self.session_break_interval == 0:
                 print(f"⏸️  Taking a {self.break_duration/60:.1f} minute break...")
                 await asyncio.sleep(self.break_duration)
-        
+
         return matching_profiles
     
     def save_to_csv(self, profiles: List[Dict], filename: Optional[str] = None):
@@ -512,57 +600,83 @@ class SafeInstagramScraper:
         
         print(f"✅ Saved {len(profiles)} profiles to {filepath}")
     
-    async def run(self, search_config: Dict, filters: Dict):
-        """Main execution method"""
+    async def run(self, search_config: Dict, filters: Dict, progress: Optional[Dict] = None):
+        """Main execution method. If ``progress`` is passed (same dict as web UI), it is updated in place."""
+        self._progress = progress
         try:
+            self._touch_progress(current_action='Starting browser...', running=True)
             await self.init_browser()
-            
+
+            self._touch_progress(current_action='Logging in...')
             if not await self.login():
+                self._touch_progress(current_action='❌ Login failed')
                 return
-            
-            all_usernames = []
-            
-            # Collect usernames from different search methods
+
+            all_usernames: List[str] = []
+
             if 'hashtags' in search_config:
                 for hashtag in search_config['hashtags']:
+                    if not self._should_run():
+                        break
+                    self._touch_progress(current_action=f'Searching hashtag #{hashtag}', profiles_found=len(all_usernames))
                     usernames = await self.search_by_hashtag(hashtag, search_config.get('max_per_hashtag', 50))
                     all_usernames.extend(usernames)
-                    await self.safe_delay(5, 10)  # Longer delay between searches
-            
-            if 'locations' in search_config:
+                    await self.safe_delay(5, 10)
+
+            if 'locations' in search_config and self._should_run():
                 for location in search_config['locations']:
+                    if not self._should_run():
+                        break
+                    self._touch_progress(current_action=f'Searching location: {location}', profiles_found=len(all_usernames))
                     usernames = await self.search_by_location(location, search_config.get('max_per_location', 50))
                     all_usernames.extend(usernames)
                     await self.safe_delay(5, 10)
-            
-            if 'seed_accounts' in search_config:
+
+            if 'seed_accounts' in search_config and self._should_run():
                 for account in search_config['seed_accounts']:
+                    if not self._should_run():
+                        break
+                    self._touch_progress(current_action=f'Loading followers of @{account}', profiles_found=len(all_usernames))
                     usernames = await self.get_followers(account, search_config.get('max_per_account', 100))
                     all_usernames.extend(usernames)
                     await self.safe_delay(5, 10)
-            
-            if 'use_explore' in search_config and search_config['use_explore']:
+
+            if search_config.get('use_explore') and self._should_run():
+                self._touch_progress(current_action='Browsing explore...', profiles_found=len(all_usernames))
                 usernames = await self.search_explore_page(search_config.get('max_explore', 50))
                 all_usernames.extend(usernames)
-            
-            # Remove duplicates
+
             unique_usernames = list(dict.fromkeys(all_usernames))
             print(f"\n📋 Found {len(unique_usernames)} unique profiles to check")
-            
-            # Scrape and filter profiles
+            self._touch_progress(
+                current_action='Scraping profiles...',
+                total=len(unique_usernames),
+                progress=0,
+                profiles_found=0,
+            )
+
             matching_profiles = await self.scrape_profiles(unique_usernames, filters)
-            
-            # Save results
+
             if matching_profiles:
                 self.save_to_csv(matching_profiles)
+                self._touch_progress(current_action=f'✅ Saved {len(matching_profiles)} profiles!')
             else:
                 print("⚠️  No profiles matched your filters")
-            
+                self._touch_progress(current_action='⚠️ No profiles matched filters')
+
         except Exception as e:
             print(f"❌ Error: {str(e)}")
+            self._touch_progress(current_action=f'❌ Error: {str(e)}')
         finally:
             if self.browser:
-                await self.browser.close()
+                try:
+                    await self.browser.close()
+                except Exception:
+                    pass
+            self.browser = None
+            self.context = None
+            self.page = None
+            self._progress = None
 
 
 async def main():

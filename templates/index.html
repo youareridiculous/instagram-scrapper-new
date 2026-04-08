@@ -344,8 +344,21 @@
                     document.getElementById('matchingProfiles').textContent = data.results.length || 0;
                     
                     const container = document.getElementById('resultsContainer');
-                    if (data.results.length === 0) {
-                        container.innerHTML = '<p style="color: #6b7280; text-align: center;">No results yet. Start the scraper to begin collecting profiles.</p>';
+                    let filesBlock = '';
+                    if (data.files && data.files.length > 0) {
+                        filesBlock = '<div style="margin-bottom:20px;padding:14px;background:#ecfdf5;border-radius:10px;border:1px solid #a7f3d0;">';
+                        filesBlock += '<p style="font-weight:600;color:#065f46;margin-bottom:8px;">Download CSV</p>';
+                        filesBlock += '<p style="color:#047857;font-size:14px;margin-bottom:10px;">Google Sheets: <strong>File → Import → Upload</strong> and select the CSV.</p><ul style="margin:0;padding-left:20px;">';
+                        data.files.forEach(f => {
+                            const fn = encodeURIComponent(f.filename);
+                            filesBlock += `<li style="margin:6px 0;"><a href="/api/download/${fn}" download>${f.filename}</a> <span style="color:#6b7280;">(${f.count} rows)</span></li>`;
+                        });
+                        filesBlock += '</ul></div>';
+                    }
+
+                    if (!data.results || data.results.length === 0) {
+                        const emptyMsg = '<p style="color: #6b7280; text-align: center;">No rows loaded in the preview table yet. Start the scraper or use a CSV link above if files exist.</p>';
+                        container.innerHTML = filesBlock + emptyMsg;
                         return;
                     }
                     
@@ -363,7 +376,7 @@
                     });
                     
                     html += '</tbody></table>';
-                    container.innerHTML = html;
+                    container.innerHTML = filesBlock + html;
                 });
         }
         

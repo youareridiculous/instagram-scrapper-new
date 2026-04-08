@@ -15,8 +15,11 @@ A safety-first Instagram profile scraper that finds users based on customizable 
 
 ```bash
 pip install -r requirements.txt
+playwright install firefox
 playwright install chromium
 ```
+
+Or run `./setup.sh`, which installs dependencies and both browsers.
 
 ### 2. Configure Credentials
 
@@ -61,7 +64,7 @@ source venv/bin/activate
 python3 web_interface.py
 ```
 
-Then open your browser to: **http://localhost:5000**
+Then open your browser to: **http://localhost:5001**
 
 The web interface provides:
 - 📊 Real-time dashboard with progress tracking
@@ -69,6 +72,28 @@ The web interface provides:
 - ⚙️ Configure search and filters from the browser
 - ▶️ Start/stop the scraper with one click
 - 📈 Live statistics and progress updates
+- 📥 Download CSV files from the dashboard (see **Google Sheets** below)
+
+### Google Sheets (import from CSV)
+
+1. Run a scrape and download `scraped_data/*.csv` from the web UI (or copy the file from disk).
+2. In Google Sheets: **File → Import → Upload** and choose the CSV.
+3. Pick “Replace spreadsheet” or “Insert new sheet” as you prefer.
+
+### Manual smoke test (operator)
+
+1. Fill `.env` with a **dedicated** Instagram test account.
+2. **CLI:** `python instagram_scraper.py` (omit `--headless` the first time if login is flaky).
+3. **Web:** `python web_interface.py` → open **http://localhost:5001** → Start → Stop.
+4. Confirm a CSV appears under `scraped_data/` and downloads from the UI.
+5. Import that CSV into Sheets using the steps above.
+
+### Automated tests (developers)
+
+```bash
+pip install pytest
+pytest -q
+```
 
 ### Command Line Usage
 
