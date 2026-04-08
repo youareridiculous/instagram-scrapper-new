@@ -327,6 +327,26 @@
             padding: 0;
             font-weight: 600;
         }
+
+        .settings-card {
+            background: white;
+            padding: 28px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        .settings-card > h2 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 1.35rem;
+        }
+
+        .settings-intro {
+            color: #6b7280;
+            margin-bottom: 20px;
+            font-size: 15px;
+        }
     </style>
 </head>
 <body>
@@ -348,7 +368,7 @@
             <div class="controls">
                 <button class="btn-start" onclick="startScraper()">▶ Start Scraper</button>
                 <button class="btn-stop" onclick="stopScraper()">⏹ Stop</button>
-                <button class="btn-config" onclick="showFormConfig()">⚙️ Configure</button>
+                <button type="button" class="btn-config" onclick="showJsonConfig()">📝 Advanced JSON</button>
             </div>
         </div>
         
@@ -366,38 +386,27 @@
                 <div class="stat-label">Progress</div>
             </div>
         </div>
-        
-        <div class="results-table">
-            <div style="padding: 20px; border-bottom: 1px solid #e5e7eb;">
-                <h2>Scraped Profiles</h2>
-            </div>
-            <div id="resultsContainer" style="padding: 20px;">
-                <p style="color: #6b7280; text-align: center;">No results yet. Start the scraper to begin collecting profiles.</p>
-            </div>
-        </div>
-    </div>
-    
-    <div class="config-modal modal-wide" id="configFormModal">
-        <div class="modal-content">
+
+        <div class="settings-card" id="search-filters">
             <h2>Search &amp; filters</h2>
-            <p style="color: #6b7280; margin-bottom: 18px;">Set where to look and which profiles to keep. Nothing runs until you press Start Scraper.</p>
+            <p class="settings-intro">Set where to look and which profiles to keep. Click <strong>Save settings</strong> before starting a run. Scraping only begins when you press <strong>Start Scraper</strong>.</p>
 
             <div class="form-section">
                 <h3>Search</h3>
                 <div class="form-row">
                     <div class="form-field full-width">
                         <label for="cfg_hashtags">Hashtags</label>
-                        <input type="text" id="cfg_hashtags" placeholder="entrepreneur, startup" />
+                        <input type="text" id="cfg_hashtags" placeholder="entrepreneur, startup" autocomplete="off" />
                         <span class="hint">Comma-separated, without #</span>
                     </div>
                     <div class="form-field full-width">
                         <label for="cfg_locations">Locations</label>
-                        <textarea id="cfg_locations" placeholder="One per line, e.g.&#10;San Francisco, California"></textarea>
+                        <textarea id="cfg_locations" placeholder="One per line, e.g.&#10;San Francisco, California" autocomplete="off"></textarea>
                         <span class="hint">One location per line (commas inside a city name are OK)</span>
                     </div>
                     <div class="form-field full-width">
                         <label for="cfg_seed">Seed accounts (usernames)</label>
-                        <input type="text" id="cfg_seed" placeholder="some_account, other_brand" />
+                        <input type="text" id="cfg_seed" placeholder="some_account, other_brand" autocomplete="off" />
                         <span class="hint">Comma-separated; scraper can load followers of these accounts</span>
                     </div>
                     <div class="form-field">
@@ -454,8 +463,8 @@
                     </div>
                     <div class="form-field full-width">
                         <label for="cfg_bio_kw">Bio keywords (any match)</label>
-                        <input type="text" id="cfg_bio_kw" placeholder="founder, entrepreneur, ceo" />
-                        <span class="hint">Comma-separated; bio must contain at least one keyword</span>
+                        <input type="text" id="cfg_bio_kw" placeholder="founder, entrepreneur, ceo" autocomplete="off" />
+                        <span class="hint">Comma-separated; bio must contain at least one keyword (leave empty to skip)</span>
                     </div>
                     <div class="form-field">
                         <label for="cfg_acct_type">Account type</label>
@@ -476,12 +485,20 @@
 
             <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
                 <button type="button" class="btn-config" onclick="saveFormConfig()">💾 Save settings</button>
-                <button type="button" class="btn-stop" onclick="hideFormConfig()">Cancel</button>
+                <button type="button" class="link-advanced" onclick="openJsonEditorFromForm()">Advanced: edit raw JSON…</button>
             </div>
-            <button type="button" class="link-advanced" onclick="openJsonEditorFromForm()">Advanced: edit raw JSON…</button>
+        </div>
+        
+        <div class="results-table">
+            <div style="padding: 20px; border-bottom: 1px solid #e5e7eb;">
+                <h2>Scraped Profiles</h2>
+            </div>
+            <div id="resultsContainer" style="padding: 20px;">
+                <p style="color: #6b7280; text-align: center;">No results yet. Start the scraper to begin collecting profiles.</p>
+            </div>
         </div>
     </div>
-
+    
     <div class="config-modal" id="configModal">
         <div class="modal-content">
             <h2>Advanced: raw JSON</h2>
@@ -489,7 +506,7 @@
             <textarea id="configTextarea"></textarea>
             <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
                 <button class="btn-config" onclick="saveConfig()">💾 Save JSON</button>
-                <button type="button" class="btn-config" style="background:#6366f1;" onclick="backToFormFromJson()">← Back to form</button>
+                <button type="button" class="btn-config" style="background:#6366f1;" onclick="backToFormFromJson()">← Back to settings</button>
                 <button class="btn-stop" onclick="hideConfig()">Cancel</button>
             </div>
         </div>
@@ -680,21 +697,16 @@
             }).then(r => r.json());
         }
 
-        function showFormConfig() {
+        function loadConfigIntoForm() {
             fetch('/api/config')
                 .then(r => r.json())
                 .then(data => {
                     if (data.error) {
-                        alert('Could not load config: ' + (data.error || 'unknown'));
+                        console.warn('Config load:', data.error);
                         return;
                     }
                     applyConfigToForm(data);
-                    document.getElementById('configFormModal').classList.add('active');
                 });
-        }
-
-        function hideFormConfig() {
-            document.getElementById('configFormModal').classList.remove('active');
         }
 
         function saveFormConfig() {
@@ -704,7 +716,6 @@
                     alert('Error: ' + data.error);
                 } else {
                     alert('Settings saved to config.json');
-                    hideFormConfig();
                 }
             });
         }
@@ -712,7 +723,6 @@
         function openJsonEditorFromForm() {
             const config = formToConfig();
             document.getElementById('configTextarea').value = JSON.stringify(config, null, 2);
-            hideFormConfig();
             document.getElementById('configModal').classList.add('active');
         }
 
@@ -721,16 +731,21 @@
                 const config = JSON.parse(document.getElementById('configTextarea').value);
                 applyConfigToForm(config);
                 hideConfig();
-                document.getElementById('configFormModal').classList.add('active');
+                const el = document.getElementById('search-filters');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
             } catch (e) {
                 alert('Fix JSON first: ' + e.message);
             }
         }
 
-        function showConfig() {
+        function showJsonConfig() {
             fetch('/api/config')
                 .then(r => r.json())
                 .then(data => {
+                    if (data.error) {
+                        alert('Could not load config: ' + (data.error || 'unknown'));
+                        return;
+                    }
                     document.getElementById('configTextarea').value = JSON.stringify(data, null, 2);
                     document.getElementById('configModal').classList.add('active');
                 });
@@ -765,6 +780,7 @@
         // Initial load
         updateStatus();
         loadResults();
+        loadConfigIntoForm();
     </script>
 </body>
 </html>
