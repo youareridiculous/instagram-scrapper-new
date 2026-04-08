@@ -271,12 +271,100 @@
             .form-row { grid-template-columns: 1fr; }
         }
 
-        .form-field label {
+        .form-field > .label-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+            flex-wrap: wrap;
+        }
+
+        .form-field > .label-row > label {
+            display: inline;
+            margin-bottom: 0;
+            font-size: 13px;
+            font-weight: 600;
+            color: #4b5563;
+        }
+
+        .form-field label.standalone-label {
             display: block;
             font-size: 13px;
             font-weight: 600;
             color: #4b5563;
             margin-bottom: 4px;
+        }
+
+        .help-tip {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: help;
+            flex-shrink: 0;
+            outline: none;
+        }
+
+        .help-tip-icon {
+            width: 17px;
+            height: 17px;
+            border-radius: 50%;
+            background: #e0e7ff;
+            color: #4338ca;
+            font-size: 11px;
+            font-weight: 700;
+            font-style: italic;
+            line-height: 17px;
+            text-align: center;
+            user-select: none;
+        }
+
+        .help-tip:hover .help-tip-icon,
+        .help-tip:focus .help-tip-icon {
+            background: #c7d2fe;
+            color: #312e81;
+        }
+
+        .help-tip-bubble {
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            z-index: 3000;
+            left: 50%;
+            bottom: calc(100% + 10px);
+            transform: translateX(-50%);
+            width: min(300px, 78vw);
+            padding: 10px 12px;
+            background: #1f2937;
+            color: #f3f4f6;
+            font-size: 12px;
+            font-weight: 400;
+            line-height: 1.5;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            pointer-events: none;
+            text-align: left;
+        }
+
+        .help-tip-bubble::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -7px;
+            border: 7px solid transparent;
+            border-top-color: #1f2937;
+        }
+
+        .help-tip:hover .help-tip-bubble,
+        .help-tip:focus .help-tip-bubble,
+        .help-tip:focus-visible .help-tip-bubble {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .checkbox-row .help-tip {
+            margin-left: 2px;
         }
 
         .form-field input[type="text"],
@@ -404,37 +492,79 @@
                 <h3>Search</h3>
                 <div class="form-row">
                     <div class="form-field full-width">
-                        <label for="cfg_hashtags">Hashtags</label>
+                        <div class="label-row">
+                            <label for="cfg_hashtags">Hashtags</label>
+                            <span class="help-tip" tabindex="0" role="button" aria-label="Help: Hashtags">
+                                <span class="help-tip-icon" aria-hidden="true">i</span>
+                                <span class="help-tip-bubble" role="tooltip">Which hashtag feeds to open on Instagram. Enter tag names only—do not type #. Use commas between multiple tags. The scraper finds profile handles from posts shown in each tag’s grid.</span>
+                            </span>
+                        </div>
                         <input type="text" id="cfg_hashtags" placeholder="Example: entrepreneur, startup, coffee — no # symbol" autocomplete="off" />
                         <span class="hint">Type tags separated by commas. Example: <code>fitness, yoga, gym</code></span>
                     </div>
                     <div class="form-field full-width">
-                        <label for="cfg_locations">Locations</label>
+                        <div class="label-row">
+                            <label for="cfg_locations">Locations</label>
+                            <span class="help-tip" tabindex="0" role="button" aria-label="Help: Locations">
+                                <span class="help-tip-icon" aria-hidden="true">i</span>
+                                <span class="help-tip-bubble" role="tooltip">Geographic location pages on Instagram. Put each place on its own line, written the way you would search in the app (e.g. a full city and state). The scraper resolves authors from posts in that location feed.</span>
+                            </span>
+                        </div>
                         <textarea id="cfg_locations" placeholder="Example (one line per place):&#10;Austin, Texas&#10;Brooklyn, New York&#10;London, United Kingdom" autocomplete="off"></textarea>
                         <span class="hint">One city/region per line. Example line: <code>San Francisco, California</code></span>
                     </div>
                     <div class="form-field full-width">
-                        <label for="cfg_seed">Seed accounts (usernames)</label>
+                        <div class="label-row">
+                            <label for="cfg_seed">Seed accounts (usernames)</label>
+                            <span class="help-tip" tabindex="0" role="button" aria-label="Help: Seed accounts">
+                                <span class="help-tip-icon" aria-hidden="true">i</span>
+                                <span class="help-tip-bubble" role="tooltip">Instagram usernames to use as “seeds.” For each account, the scraper can load its follower list and add those handles to the queue. Omit @; separate multiple seeds with commas. Useful to mirror an audience similar to a brand or creator.</span>
+                            </span>
+                        </div>
                         <input type="text" id="cfg_seed" placeholder="Example: natgeo, shopify — @ not needed" autocomplete="off" />
                         <span class="hint">Comma-separated Instagram usernames; scraper pulls followers from each. Example: <code>brand_a, brand_b</code></span>
                     </div>
                     <div class="form-field">
-                        <label for="cfg_max_tag">Max per hashtag</label>
+                        <div class="label-row">
+                            <label for="cfg_max_tag">Max per hashtag</label>
+                            <span class="help-tip" tabindex="0" role="button" aria-label="Help: Max per hashtag">
+                                <span class="help-tip-icon" aria-hidden="true">i</span>
+                                <span class="help-tip-bubble" role="tooltip">Upper limit on how many distinct profile handles to collect from each hashtag search (after opening posts and resolving authors). Lower numbers finish faster; higher numbers cast a wider net.</span>
+                            </span>
+                        </div>
                         <input type="number" id="cfg_max_tag" min="1" placeholder="e.g. 50" />
                         <span class="hint">Cap profiles discovered per tag. Example: <code>50</code> (default if blank)</span>
                     </div>
                     <div class="form-field">
-                        <label for="cfg_max_loc">Max per location</label>
+                        <div class="label-row">
+                            <label for="cfg_max_loc">Max per location</label>
+                            <span class="help-tip" tabindex="0" role="button" aria-label="Help: Max per location">
+                                <span class="help-tip-icon" aria-hidden="true">i</span>
+                                <span class="help-tip-bubble" role="tooltip">Same idea as “Max per hashtag,” but for each location line you entered. Caps how many handles to resolve from that location’s post grid.</span>
+                            </span>
+                        </div>
                         <input type="number" id="cfg_max_loc" min="1" placeholder="e.g. 50" />
                         <span class="hint">Cap per location feed. Example: <code>30</code></span>
                     </div>
                     <div class="form-field">
-                        <label for="cfg_max_seed">Max followers per seed</label>
+                        <div class="label-row">
+                            <label for="cfg_max_seed">Max followers per seed</label>
+                            <span class="help-tip" tabindex="0" role="button" aria-label="Help: Max followers per seed">
+                                <span class="help-tip-icon" aria-hidden="true">i</span>
+                                <span class="help-tip-bubble" role="tooltip">Maximum follower usernames to read from each seed account’s follower dialog. Increase to dig deeper into large follower lists; keep moderate for speed and safety.</span>
+                            </span>
+                        </div>
                         <input type="number" id="cfg_max_seed" min="1" placeholder="e.g. 100" />
                         <span class="hint">Max follower usernames per seed account. Example: <code>100</code></span>
                     </div>
                     <div class="form-field">
-                        <label for="cfg_max_explore">Max from explore</label>
+                        <div class="label-row">
+                            <label for="cfg_max_explore">Max from explore</label>
+                            <span class="help-tip" tabindex="0" role="button" aria-label="Help: Max from explore">
+                                <span class="help-tip-icon" aria-hidden="true">i</span>
+                                <span class="help-tip-bubble" role="tooltip">Only used when “Include Explore page” is checked. Limits how many handles to resolve from the main Explore feed’s posts.</span>
+                            </span>
+                        </div>
                         <input type="number" id="cfg_max_explore" min="1" placeholder="e.g. 50" />
                         <span class="hint">Used when Explore is checked. Example: <code>40</code></span>
                     </div>
@@ -442,6 +572,10 @@
                         <div class="checkbox-row">
                             <input type="checkbox" id="cfg_use_explore" />
                             <label for="cfg_use_explore" style="margin:0;font-weight:500;">Include Explore page</label>
+                            <span class="help-tip" tabindex="0" role="button" aria-label="Help: Include Explore">
+                                <span class="help-tip-icon" aria-hidden="true">i</span>
+                                <span class="help-tip-bubble" role="tooltip">When enabled, the scraper also visits instagram.com/explore/ and collects authors from posts there, in addition to hashtags, locations, and seeds. Uses “Max from explore” as the cap.</span>
+                            </span>
                         </div>
                         <span class="hint">Example: turn on to mix in posts from <code>/explore/</code> (uses “Max from explore”)</span>
                     </div>
@@ -452,42 +586,90 @@
                 <h3>Filters (who to keep)</h3>
                 <div class="form-row">
                     <div class="form-field">
-                        <label for="cfg_min_fol">Min followers</label>
+                        <div class="label-row">
+                            <label for="cfg_min_fol">Min followers</label>
+                            <span class="help-tip" tabindex="0" role="button" aria-label="Help: Min followers">
+                                <span class="help-tip-icon" aria-hidden="true">i</span>
+                                <span class="help-tip-bubble" role="tooltip">After each profile is opened, its follower count is read. Profiles below this number are discarded. Leave blank to not require a minimum.</span>
+                            </span>
+                        </div>
                         <input type="number" id="cfg_min_fol" min="0" placeholder="e.g. 1000" />
                         <span class="hint">Example: <code>5000</code> — leave blank for no minimum</span>
                     </div>
                     <div class="form-field">
-                        <label for="cfg_max_fol">Max followers</label>
+                        <div class="label-row">
+                            <label for="cfg_max_fol">Max followers</label>
+                            <span class="help-tip" tabindex="0" role="button" aria-label="Help: Max followers">
+                                <span class="help-tip-icon" aria-hidden="true">i</span>
+                                <span class="help-tip-bubble" role="tooltip">Profiles with more followers than this are discarded—useful to focus on micro-influencers or smaller accounts. Leave blank for no ceiling.</span>
+                            </span>
+                        </div>
                         <input type="number" id="cfg_max_fol" min="0" placeholder="e.g. 50000" />
                         <span class="hint">Example: <code>100000</code> — blank = no max</span>
                     </div>
                     <div class="form-field">
-                        <label for="cfg_min_ing">Min following</label>
+                        <div class="label-row">
+                            <label for="cfg_min_ing">Min following</label>
+                            <span class="help-tip" tabindex="0" role="button" aria-label="Help: Min following">
+                                <span class="help-tip-icon" aria-hidden="true">i</span>
+                                <span class="help-tip-bubble" role="tooltip">Requires the account to follow at least this many others. Leave blank to ignore “following” count when filtering.</span>
+                            </span>
+                        </div>
                         <input type="number" id="cfg_min_ing" min="0" placeholder="e.g. 100" />
                         <span class="hint">Example: <code>200</code> — blank = skip this filter</span>
                     </div>
                     <div class="form-field">
-                        <label for="cfg_max_ing">Max following</label>
+                        <div class="label-row">
+                            <label for="cfg_max_ing">Max following</label>
+                            <span class="help-tip" tabindex="0" role="button" aria-label="Help: Max following">
+                                <span class="help-tip-icon" aria-hidden="true">i</span>
+                                <span class="help-tip-bubble" role="tooltip">Drops accounts that follow more than this many profiles. Leave blank to skip.</span>
+                            </span>
+                        </div>
                         <input type="number" id="cfg_max_ing" min="0" placeholder="e.g. 5000" />
                         <span class="hint">Example: <code>7500</code> — blank = skip</span>
                     </div>
                     <div class="form-field">
-                        <label for="cfg_min_posts">Min posts</label>
+                        <div class="label-row">
+                            <label for="cfg_min_posts">Min posts</label>
+                            <span class="help-tip" tabindex="0" role="button" aria-label="Help: Min posts">
+                                <span class="help-tip-icon" aria-hidden="true">i</span>
+                                <span class="help-tip-bubble" role="tooltip">Requires at least this many posts on the profile. Helps skip empty or brand-new accounts. Blank = no minimum post count.</span>
+                            </span>
+                        </div>
                         <input type="number" id="cfg_min_posts" min="0" placeholder="e.g. 10" />
                         <span class="hint">Example: <code>20</code> — blank = skip</span>
                     </div>
                     <div class="form-field">
-                        <label for="cfg_max_posts">Max posts</label>
+                        <div class="label-row">
+                            <label for="cfg_max_posts">Max posts</label>
+                            <span class="help-tip" tabindex="0" role="button" aria-label="Help: Max posts">
+                                <span class="help-tip-icon" aria-hidden="true">i</span>
+                                <span class="help-tip-bubble" role="tooltip">Drops profiles with more than this many posts. Leave blank to ignore.</span>
+                            </span>
+                        </div>
                         <input type="number" id="cfg_max_posts" min="0" placeholder="e.g. 5000" />
                         <span class="hint">Example: <code>1000</code> — blank = skip</span>
                     </div>
                     <div class="form-field full-width">
-                        <label for="cfg_bio_kw">Bio keywords (any match)</label>
+                        <div class="label-row">
+                            <label for="cfg_bio_kw">Bio keywords (any match)</label>
+                            <span class="help-tip" tabindex="0" role="button" aria-label="Help: Bio keywords">
+                                <span class="help-tip-icon" aria-hidden="true">i</span>
+                                <span class="help-tip-bubble" role="tooltip">The profile bio text must contain at least one of these words (not case-sensitive). Separate words or phrases with commas. If you leave this empty, bios are not used for filtering.</span>
+                            </span>
+                        </div>
                         <input type="text" id="cfg_bio_kw" placeholder="Example: founder, ceo, photographer" autocomplete="off" />
                         <span class="hint">Comma-separated; bio must include <strong>at least one</strong>. Example: <code>writer, author, journalist</code> — empty = don’t filter by bio</span>
                     </div>
                     <div class="form-field">
-                        <label for="cfg_acct_type">Account type</label>
+                        <div class="label-row">
+                            <label for="cfg_acct_type">Account type</label>
+                            <span class="help-tip" tabindex="0" role="button" aria-label="Help: Account type">
+                                <span class="help-tip-icon" aria-hidden="true">i</span>
+                                <span class="help-tip-bubble" role="tooltip">Optionally keep only profiles classified as Personal or Business based on what the scraper detects on the page. “Any” does not filter by account type. Detection is best-effort and may not match Instagram’s internal labels perfectly.</span>
+                            </span>
+                        </div>
                         <select id="cfg_acct_type">
                             <option value="">Any — example: leave here to allow all</option>
                             <option value="personal">Personal</option>
@@ -499,6 +681,10 @@
                         <div class="checkbox-row">
                             <input type="checkbox" id="cfg_verified_only" />
                             <label for="cfg_verified_only" style="margin:0;font-weight:500;">Verified accounts only</label>
+                            <span class="help-tip" tabindex="0" role="button" aria-label="Help: Verified only">
+                                <span class="help-tip-icon" aria-hidden="true">i</span>
+                                <span class="help-tip-bubble" role="tooltip">When checked, only profiles that appear verified (blue badge) on the page are kept. Unchecked allows verified and unverified accounts through other filters.</span>
+                            </span>
                         </div>
                         <span class="hint">Example: check to keep only accounts with a blue verified badge</span>
                     </div>
